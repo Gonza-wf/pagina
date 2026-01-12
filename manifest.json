@@ -2,7 +2,7 @@
   "name": "NO TOQUES",
   "short_name": "NO TOQUES",
   "description": "El juego miente. A veces.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#0a0a0a",
