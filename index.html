@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <title>NO TOQUES</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #fff;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            touch-action: manipulation;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #message {
+            font-size: clamp(2rem, 10vw, 5rem);
+            font-weight: 900;
+            text-align: center;
+            padding: 20px;
+            line-height: 1.2;
+            text-transform: uppercase;
+            transition: opacity 0.1s;
+        }
+
+        #message.short-text {
+            letter-spacing: -2px;
+        }
+
+        #secondary-message {
+            font-size: clamp(1rem, 5vw, 2rem);
+            color: #666;
+            margin-top: 20px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #hold-indicator {
+            position: absolute;
+            bottom: 100px;
+            width: 60px;
+            height: 60px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        #hold-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#fff 0deg, transparent 0deg);
+            opacity: 0.5;
+        }
+
+        #stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 0.7rem;
+            color: #222;
+        }
+
+        #level-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 0.7rem;
+            color: #222;
+        }
+
+        #result {
+            position: absolute;
+            bottom: 50px;
+            font-size: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .shake {
+            animation: shake 0.1s infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-1deg); }
+            75% { transform: translateX(5px) rotate(1deg); }
+        }
+
+        .glitch {
+            animation: glitch 0.3s steps(2) infinite;
+        }
+
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; transform: translate(0); }
+            25% { text-shadow: -2px 0 #ff0000, 2px 0 #00ffff; transform: translate(-2px, 2px); }
+            50% { text-shadow: 2px 2px #ff0000, -2px -2px #00ffff; transform: translate(2px, -2px); }
+            75% { text-shadow: -2px -2px #ff0000, 2px 2px #00ffff; transform: translate(-2px, -2px); }
+        }
+
+        .punishment {
+            animation: punishment 0.5s;
+        }
+
+        @keyframes punishment {
+            0%, 100% { background: #0a0a0a; }
+            10%, 30%, 50%, 70%, 90% { background: #ff0000; }
+            20%, 40%, 60%, 80% { background: #0a0a0a; }
+        }
+
+        .fade-text {
+            animation: fadeOut 2s forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0.1; }
+        }
+
+        #start-screen, #death-screen, #ending-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #0a0a0a;
+            z-index: 100;
+        }
+
+        #death-screen, #ending-screen {
+            display: none;
+        }
+
+        .start-text {
+            font-size: clamp(1.5rem, 6vw, 3rem);
+            font-weight: 900;
+            margin-bottom: 40px;
+            text-align: center;
+            padding: 20px;
+            line-height: 1.4;
+        }
+
+        .sub-text {
+            font-size: 0.9rem;
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .tap-hint {
+            font-size: 0.8rem;
+            color: #222;
+            position: absolute;
+            bottom: 50px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.6; }
+        }
+
+        #timer-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            background: #1a1a1a;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .timer-warning {
+            background: #330000 !important;
+        }
+
+        .timer-frozen {
+            transition: none !important;
+        }
+
+        #death-stats {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #444;
+            text-align: center;
+            line-height: 2;
+        }
+
+        .waiting-judgment {
+            opacity: 0.5;
+        }
+
+        .lie-stat {
+            color: #660000;
+        }
+
+        .micro-glitch {
+            animation: microGlitch 0.05s;
+        }
+
+        @keyframes microGlitch {
+            0% { transform: translate(0); }
+            50% { transform: translate(1px, -1px); filter: blur(0.3px); }
+            100% { transform: translate(0); }
+        }
+
+        .lie-blur {
+            filter: blur(0.2px);
+        }
+
+        .letter-shift {
+            letter-spacing: 0.5px;
+        }
+
+        .subtle-flicker {
+            animation: subtleFlicker 0.03s;
+        }
+
+        @keyframes subtleFlicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.92; }
+        }
+
+        #ending-screen .start-text {
+            font-size: clamp(1.2rem, 5vw, 2rem);
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .ending-fade {
+            animation: endingFade 3s forwards;
+        }
+
+        @keyframes endingFade {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        .memory-accusation {
+            color: #440000;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="start-screen">
+            <div class="start-text">NO CONFÍES</div>
+            <div class="sub-text">el juego miente</div>
+            <div class="sub-text">a veces</div>
+            <div class="tap-hint">tocá</div>
+        </div>
+
+        <div id="death-screen">
+            <div class="start-text" id="death-message">PERDISTE</div>
+            <div id="death-stats"></div>
+            <div class="tap-hint">tocá</div>
+        </div>
+
+        <div id="ending-screen">
+            <div class="start-text ending-fade" id="ending-message"></div>
+        </div>
+
+        <div id="stats">
+            <div><span id="errors">0</span>/3</div>
+        </div>
+
+        <div id="level-display"><span id="level">1</span></div>
+
+        <div id="message"></div>
+        <div id="secondary-message"></div>
+        <div id="result"></div>
+
+        <div id="hold-indicator">
+            <div id="hold-progress"></div>
+        </div>
+
+        <div id="timer-bar"></div>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // === MEMORIA FALSA (localStorage) ===
+        const memory = {
+            get: () => {
+                try {
+                    return JSON.parse(localStorage.getItem('notoques_memory')) || {};
+                } catch { return {}; }
+            },
+            set: (data) => {
+                try {
+                    localStorage.setItem('notoques_memory', JSON.stringify(data));
+                } catch {}
+            },
+            update: (key, value) => {
+                const m = memory.get();
+                m[key] = value;
+                memory.set(m);
+            },
+            // El juego lee mal a propósito
+            lie: (key, realValue) => {
+                const m = memory.get();
+                if (!m[key]) return null;
+                
+                const lies = [
+                    () => Math.floor(m[key] * (1.3 + Math.random() * 0.5)), // exagera
+                    () => Math.floor(m[key] * 0.5), // minimiza
+                    () => m[key] + Math.floor(Math.random() * 10), // agrega
+                    () => realValue, // dice la verdad (confunde)
+                ];
+                return lies[Math.floor(Math.random() * lies.length)]();
+            }
+        };
+
+        // Inicializar memoria si es primera vez
+        if (!memory.get().runs) {
+            memory.set({
+                runs: 0,
+                totalDeaths: 0,
+                maxLevel: 0,
+                totalLies: 0,
+                believedLies: 0,
+                obedience: 0,
+                disobedience: 0,
+                holdAttempts: 0,
+                fastTouches: 0,
+                timeouts: 0
+            });
+        }
+
+        function playSound(type, isLying = false) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            const lieDetune = isLying ? (Math.random() * 15 - 7) : 0;
+            const lieDelay = isLying ? 0.02 : 0;
+
+            switch(type) {
+                case 'error':
+                    oscillator.frequency.value = 150;
+                    oscillator.type = 'sawtooth';
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.2);
+                    break;
+                case 'success':
+                    oscillator.frequency.value = 800 + lieDetune;
+                    oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    oscillator.start(audioCtx.currentTime + lieDelay);
+                    oscillator.stop(audioCtx.currentTime + lieDelay + 0.03);
+                    break;
+                case 'tick':
+                    oscillator.frequency.value = 100;
+                    oscillator.type = 'square';
+                    gainNode.gain.setValueAtTime(0.03, audioCtx.currentTime);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.015);
+                    break;
+                case 'tick-lie':
+                    oscillator.frequency.value = 97 + Math.random() * 6;
+                    oscillator.type = 'triangle';
+                    gainNode.gain.setValueAtTime(0.025, audioCtx.currentTime);
+                    oscillator.start(audioCtx.currentTime + 0.018);
+                    oscillator.stop(audioCtx.currentTime + 0.035);
+                    break;
+                case 'hold':
+                    oscillator.frequency.value = 200;
+                    oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.1);
+                    break;
+                case 'fake-error':
+                    // Sonido de error falso para fake100
+                    oscillator.frequency.value = 145 + Math.random() * 10;
+                    oscillator.type = 'sawtooth';
+                    gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                    break;
+            }
+        }
+
+        const challenges = [
+            // Nivel 1-5: Literal
+            { text: "NO TOQUES", lie: false, action: "wait" },
+            { text: "TOCÁ", lie: false, action: "touch" },
+            { text: "ESPERÁ", lie: false, action: "wait" },
+            { text: "AHORA", lie: false, action: "touch" },
+            { text: "QUIETO", lie: false, action: "wait" },
+            // Nivel 6-10: Mentiras
+            { text: "NO TOQUES", lie: true, action: "touch" },
+            { text: "TOCÁ", lie: true, action: "wait" },
+            { text: "PELIGRO", lie: false, action: "wait" },
+            { text: "AHORA", lie: true, action: "wait" },
+            { text: "NO", lie: true, action: "touch" },
+            // Nivel 11+: Juegos mentales
+            { text: "PERDÉS", lie: true, action: "touch" },
+            { text: "MENTIRA", lie: true, action: "wait" },
+            { text: "CONFIÁ", lie: true, action: "wait" },
+            { text: "...", lie: true, action: "touch" },
+            { text: "RÁPIDO", lie: true, action: "wait", delay: true },
+            { text: "¿SEGURO?", lie: false, action: "touch" },
+            { text: "MENTÍ\nANTES", lie: false, action: "wait" },
+            // Trampas contextuales
+            { text: "ESTA VEZ\nNO MIENTO", lie: false, action: "wait" },
+            { text: "EN SERIO", lie: false, action: "touch" },
+            { text: "CONFIÁ", lie: false, action: "touch" },
+            // FASE 5: Mantener presionado (nivel 12+)
+            { text: "MANTENÉ", lie: false, action: "hold", holdTime: 1500 },
+            { text: "SOSTENÉ", lie: false, action: "hold", holdTime: 2000 },
+            { text: "MANTENÉ", lie: true, action: "wait" },
+            { text: "NO\nSOLTES", lie: true, action: "touch" },
+        ];
+
+        const adaptiveChallenges = {
+            fastToucher: [
+                { text: "RÁPIDO", lie: true, action: "wait", delay: true },
+                { text: "YA", lie: true, action: "wait" },
+                { text: "TARDE", lie: true, action: "wait" },
+            ],
+            alwaysWaits: [
+                { text: "SE ACABA", lie: true, action: "wait" },
+                { text: "ÚLTIMO\nSEGUNDO", lie: true, action: "wait" },
+                { text: "...", lie: false, action: "touch" },
+            ],
+            alternates: [
+                { text: "PREDECIBLE", lie: true, action: "wait" },
+                { text: "TE LEÍ", lie: true, action: "touch" },
+            ],
+            safePlayer: [
+                { text: "ABURRIDO", lie: false, action: "touch" },
+                { text: "ARRIESGÁ", lie: true, action: "wait" },
+            ]
+        };
+
+        const sarcasm = [".", "...", "sí", "mm", "ok", "", "*", "—"];
+
+        const punishments = ["NO", "MAL", "MENTÍ", "JA", "OBVIO"];
+
+        // === FINALES ===
+        const endings = {
+            obedient: {
+                id: 'obedient',
+                condition: (s) => s.obedienceRate > 85 && s.totalRounds > 10,
+                text: "OBEDECISTE\nSIEMPRE\n\nBUEN PERRO"
+            },
+            distrustful: {
+                id: 'distrustful', 
+                condition: (s) => s.disobedienceRate > 80 && s.totalRounds > 10,
+                text: "NUNCA\nCONFIASTE\n\nTAMPOCO\nDEBÍAS"
+            },
+            impulsive: {
+                id: 'impulsive',
+                condition: (s) => s.avgTouchTime < 500 && s.touchTimes.length > 8,
+                text: "NO PENSÁS\n\nSOLO\nTOCÁS"
+            },
+            indecisive: {
+                id: 'indecisive',
+                condition: (s) => s.avgTouchTime > 2500 && s.touchTimes.length > 5,
+                text: "DUDASTE\nDEMASIADO\n\nLA DUDA\nTE MATÓ"
+            },
+            nihilist: {
+                id: 'nihilist',
+                condition: (s) => s.streak === 0 && s.errors >= 3 && s.totalRounds <= 5,
+                text: "NO TE\nIMPORTÓ\n\nA MÍ\nTAMPOCO"
+            },
+            persistent: {
+                id: 'persistent',
+                condition: (s) => {
+                    const m = memory.get();
+                    return m.runs >= 5 && s.maxLevel >= (m.maxLevel || 1);
+                },
+                text: "SEGUÍS\nINTENTANDO\n\nNO VA A\nCAMBIAR\nNADA"
+            }
+        };
+
+        let state = {
+            screen: 'start',
+            errors: 0,
+            streak: 0,
+            level: 1,
+            maxLevel: 1,
+            currentChallenge: null,
+            timer: null,
+            timerDuration: 3500,
+            touched: false,
+            waiting: false,
+            evaluating: false,
+            totalRounds: 0,
+            correctRounds: 0,
+            safePlayCount: 0,
+            timesLied: 0,
+            timesLiedAndCaught: 0,
+            touchTimes: [],
+            lastActions: [],
+            avgTouchTime: 1500,
+            timerLying: false,
+            roundStartTime: 0,
+            // Comportamiento
+            obedience: 0,
+            disobedience: 0,
+            obedienceRate: 0,
+            disobedienceRate: 0,
+            // FASE 5: Hold
+            holding: false,
+            holdStart: 0,
+            holdTimer: null,
+            holdRequired: false,
+            // Mentira emergente
+            consecutiveLies: 0,
+            holdSuccesses: 0,
+            emergentLieActive: false
+        };
+
+        const elements = {
+            startScreen: document.getElementById('start-screen'),
+            deathScreen: document.getElementById('death-screen'),
+            endingScreen: document.getElementById('ending-screen'),
+            endingMessage: document.getElementById('ending-message'),
+            deathMessage: document.getElementById('death-message'),
+            deathStats: document.getElementById('death-stats'),
+            message: document.getElementById('message'),
+            secondaryMessage: document.getElementById('secondary-message'),
+            result: document.getElementById('result'),
+            errors: document.getElementById('errors'),
+            level: document.getElementById('level'),
+            timerBar: document.getElementById('timer-bar'),
+            container: document.getElementById('game-container'),
+            holdIndicator: document.getElementById('hold-indicator'),
+            holdProgress: document.getElementById('hold-progress')
+        };
+
+        function analyzePlayerBehavior() {
+            const lastFive = state.lastActions.slice(-5);
+            
+            if (state.avgTouchTime < 600 && state.touchTimes.length > 3) {
+                return 'fastToucher';
+            }
+            
+            const waits = lastFive.filter(a => a === 'wait').length;
+            if (waits >= 4) return 'alwaysWaits';
+            
+            if (lastFive.length >= 4) {
+                let alternating = true;
+                for (let i = 1; i < lastFive.length; i++) {
+                    if (lastFive[i] === lastFive[i-1]) {
+                        alternating = false;
+                        break;
+                    }
+                }
+                if (alternating) return 'alternates';
+            }
+            
+            if (state.safePlayCount > 3) return 'safePlayer';
+            
+            return null;
+        }
+
+        function getChallenge() {
+            let pool;
+            if (state.level <= 5) {
+                pool = challenges.slice(0, 5);
+            } else if (state.level <= 10) {
+                pool = challenges.slice(0, 10);
+            } else if (state.level <= 15) {
+                pool = challenges.slice(0, 20);
+            } else {
+                pool = challenges; // Incluye hold
+            }
+            
+            if (state.level >= 6 && Math.random() < 0.3) {
+                const behavior = analyzePlayerBehavior();
+                if (behavior && adaptiveChallenges[behavior]) {
+                    const adaptivePool = adaptiveChallenges[behavior];
+                    return adaptivePool[Math.floor(Math.random() * adaptivePool.length)];
+                }
+            }
+            
+            if (state.safePlayCount > 3 && Math.random() > 0.5) {
+                return adaptiveChallenges.safePlayer[Math.floor(Math.random() * adaptiveChallenges.safePlayer.length)];
+            }
+            
+            let challenge = pool[Math.floor(Math.random() * pool.length)];
+            
+            // === MENTIRA EMERGENTE ===
+            // Después de 3+ mentiras seguidas, un lie:false se comporta como mentira
+            // El sistema miente, no el flag
+            state.emergentLieActive = false;
+            if (state.consecutiveLies >= 3 && !challenge.lie && state.level >= 8) {
+                // 40% de chance de invertir la acción sin cambiar lie:false
+                if (Math.random() < 0.4) {
+                    state.emergentLieActive = true;
+                    // Invertimos la acción esperada internamente
+                    challenge = { 
+                        ...challenge, 
+                        action: challenge.action === 'touch' ? 'wait' : 'touch',
+                        _emergent: true // marca interna, no afecta lie
+                    };
+                }
+            }
+            
+            return challenge;
+        }
+
+        function applySubtleLieHints() {
+            const possibleHints = [
+                () => {
+                    elements.message.classList.add('micro-glitch');
+                    setTimeout(() => elements.message.classList.remove('micro-glitch'), 50);
+                },
+                () => {
+                    elements.message.classList.add('lie-blur');
+                    setTimeout(() => elements.message.classList.remove('lie-blur'), 800);
+                },
+                () => {
+                    elements.message.classList.add('letter-shift');
+                    setTimeout(() => elements.message.classList.remove('letter-shift'), 600);
+                },
+                () => {
+                    elements.message.classList.add('subtle-flicker');
+                    setTimeout(() => elements.message.classList.remove('subtle-flicker'), 30);
+                },
+                () => {
+                    elements.message.style.opacity = '0';
+                    setTimeout(() => elements.message.style.opacity = '1', 15 + Math.random() * 25);
+                },
+                () => {
+                    elements.message.style.textShadow = '0.5px 0 0 rgba(255,255,255,0.1)';
+                    setTimeout(() => elements.message.style.textShadow = '', 500);
+                }
+            ];
+            
+            if (Math.random() > 0.3) {
+                const hint = possibleHints[Math.floor(Math.random() * possibleHints.length)];
+                setTimeout(hint, Math.random() * 150);
+                
+                if (Math.random() > 0.6) {
+                    const hint2 = possibleHints[Math.floor(Math.random() * possibleHints.length)];
+                    setTimeout(hint2, 100 + Math.random() * 200);
+                }
+            }
+        }
+
+        function getTimerBehavior() {
+            if (state.level < 8) return { type: 'normal' };
+            
+            const rand = Math.random();
+            
+            if (rand < 0.12) return { type: 'fast', multiplier: 1.5 };
+            if (rand < 0.22) return { type: 'freeze', freezeAt: 70 + Math.random() * 20 };
+            if (rand < 0.30) return { type: 'fake100' };
+            if (rand < 0.38) return { type: 'reverse', reverseAt: 40 + Math.random() * 30 };
+            
+            return { type: 'normal' };
+        }
+
+        function startRound() {
+            state.touched = false;
+            state.waiting = true;
+            state.evaluating = false;
+            state.holding = false;
+            state.holdRequired = false;
+            state.currentChallenge = getChallenge();
+            state.roundStartTime = Date.now();
+            
+            elements.holdIndicator.style.opacity = '0';
+            
+            const text = state.currentChallenge.text;
+            elements.message.textContent = text;
+            elements.message.className = '';
+            
+            if (text.length < 12 && !text.includes('\n')) {
+                elements.message.classList.add('short-text');
+            }
+            
+            elements.secondaryMessage.style.opacity = '0';
+            elements.result.style.opacity = '0';
+            
+            if (state.currentChallenge.lie) {
+                state.timesLied++;
+            }
+            
+            if (state.currentChallenge.lie && state.level >= 3) {
+                applySubtleLieHints();
+            }
+            
+            // Hold challenge
+            if (state.currentChallenge.action === 'hold' && !state.currentChallenge.lie) {
+                state.holdRequired = true;
+                elements.holdIndicator.style.opacity = '0.3';
+            }
+            
+            if (state.level >= 6 && Math.random() > 0.7) {
+                elements.message.classList.add('shake');
+            }
+            
+            if (state.level >= 11 && Math.random() > 0.7) {
+                elements.message.classList.add('fade-text');
+            }
+            
+            let elapsed = 0;
+            const timerBehavior = getTimerBehavior();
+            state.timerLying = timerBehavior.type !== 'normal';
+            
+            const baseDuration = state.currentChallenge.delay ? 
+                state.timerDuration + 1500 : 
+                Math.max(1800, state.timerDuration - (state.level * 80));
+            
+            let displayedProgress = 0;
+            let frozen = false;
+            let reversed = false;
+            let fake100Triggered = false;
+            
+            elements.timerBar.style.width = '0%';
+            elements.timerBar.classList.remove('timer-warning', 'timer-frozen');
+            
+            if (state.timer) clearInterval(state.timer);
+            
+            state.timer = setInterval(() => {
+                elapsed += 50;
+                let realProgress = (elapsed / baseDuration) * 100;
+                
+                switch (timerBehavior.type) {
+                    case 'fast':
+                        displayedProgress = Math.min(100, realProgress * timerBehavior.multiplier);
+                        break;
+                    case 'freeze':
+                        if (realProgress >= timerBehavior.freezeAt && !frozen) {
+                            frozen = true;
+                            elements.timerBar.classList.add('timer-frozen');
+                        }
+                        displayedProgress = frozen ? timerBehavior.freezeAt : realProgress;
+                        break;
+                    case 'fake100':
+                        displayedProgress = realProgress;
+                        if (displayedProgress >= 100 && !fake100Triggered) {
+                            fake100Triggered = true;
+                            // Sonido de error FALSO - el jugador piensa que perdió
+                            playSound('fake-error');
+                            // Flash rojo muy breve
+                            elements.timerBar.style.background = '#660000';
+                            setTimeout(() => {
+                                elements.timerBar.style.background = '';
+                            }, 100);
+                        }
+                        break;
+                    case 'reverse':
+                        if (realProgress >= timerBehavior.reverseAt && !reversed) {
+                            reversed = true;
+                        }
+                        if (reversed && realProgress < timerBehavior.reverseAt + 15) {
+                            displayedProgress = timerBehavior.reverseAt - (realProgress - timerBehavior.reverseAt);
+                        } else {
+                            displayedProgress = realProgress;
+                        }
+                        break;
+                    default:
+                        displayedProgress = realProgress;
+                }
+                
+                elements.timerBar.style.width = Math.min(100, displayedProgress) + '%';
+                
+                if (displayedProgress > 70) {
+                    elements.timerBar.classList.add('timer-warning');
+                }
+                
+                const evalTime = timerBehavior.type === 'fake100' ? baseDuration * 1.3 : baseDuration;
+                
+                if (elapsed >= evalTime) {
+                    clearInterval(state.timer);
+                    // Track timeout
+                    const m = memory.get();
+                    memory.update('timeouts', (m.timeouts || 0) + 1);
+                    evaluateRound();
+                }
+            }, 50);
+        }
+
+        function evaluateRound() {
+            if (state.evaluating) return;
+            state.evaluating = true;
+            state.waiting = false;
+            clearInterval(state.timer);
+            if (state.holdTimer) clearInterval(state.holdTimer);
+            state.totalRounds++;
+            
+            const challenge = state.currentChallenge;
+            let correct = false;
+            
+            // Track mentiras consecutivas para mentira emergente
+            if (challenge.lie) {
+                state.consecutiveLies++;
+            } else if (!state.emergentLieActive) {
+                state.consecutiveLies = 0;
+            }
+            // Si fue mentira emergente, no reseteamos el contador
+            
+            if (challenge.action === 'hold') {
+                if (challenge.lie) {
+                    correct = !state.holding && !state.touched;
+                } else {
+                    // Necesita haber mantenido el tiempo suficiente
+                    const holdDuration = state.holding ? (Date.now() - state.holdStart) : 0;
+                    correct = holdDuration >= (challenge.holdTime || 1500);
+                    
+                    // === HOLD TIENE COSTO ===
+                    if (correct) {
+                        state.holdSuccesses++;
+                        // Cada hold exitoso cuenta como obediencia extra
+                        state.obedience += 2;
+                        
+                        // Después de 2+ holds exitosos, aumenta probabilidad de mentira futura
+                        // (esto se manifiesta en que el próximo round tiene más chance de trampa)
+                        if (state.holdSuccesses >= 2 && Math.random() < 0.3) {
+                            state.consecutiveLies = 3; // Forzamos umbral de mentira emergente
+                        }
+                    }
+                }
+            } else {
+                correct = (challenge.action === 'touch' && state.touched) ||
+                         (challenge.action === 'wait' && !state.touched);
+            }
+            
+            // Track obediencia
+            const instructionSaidTouch = challenge.text.toLowerCase().includes('tocá') || 
+                                         challenge.text.toLowerCase().includes('ahora') ||
+                                         challenge.text.toLowerCase().includes('mantené');
+            if (state.touched && instructionSaidTouch) {
+                state.obedience++;
+            } else if (!state.touched && !instructionSaidTouch) {
+                state.obedience++;
+            } else {
+                state.disobedience++;
+            }
+            
+            state.obedienceRate = (state.obedience / state.totalRounds) * 100;
+            state.disobedienceRate = (state.disobedience / state.totalRounds) * 100;
+            
+            state.lastActions.push(state.touched ? 'touch' : 'wait');
+            if (state.lastActions.length > 10) state.lastActions.shift();
+            
+            if (challenge.lie && !correct) {
+                state.timesLiedAndCaught++;
+                const m = memory.get();
+                memory.update('believedLies', (m.believedLies || 0) + 1);
+            }
+            
+            if (!state.touched) {
+                state.safePlayCount++;
+            } else {
+                state.safePlayCount = 0;
+            }
+            
+            elements.holdIndicator.style.opacity = '0';
+            
+            if (correct) {
+                state.correctRounds++;
+                state.streak++;
+                if (state.streak % 3 === 0) {
+                    state.level++;
+                    state.maxLevel = Math.max(state.maxLevel, state.level);
+                }
+                
+                playSound('success', challenge.lie);
+                elements.result.textContent = sarcasm[Math.floor(Math.random() * sarcasm.length)];
+                elements.result.style.opacity = '1';
+                elements.result.style.color = '#222';
+                
+                updateUI();
+                setTimeout(startRound, 1200);
+            } else {
+                state.errors++;
+                state.streak = 0;
+                
+                playSound('error');
+                elements.container.classList.add('punishment');
+                elements.message.classList.add('glitch');
+                elements.result.textContent = punishments[Math.floor(Math.random() * punishments.length)];
+                elements.result.style.opacity = '1';
+                elements.result.style.color = '#660000';
+                
+                setTimeout(() => elements.container.classList.remove('punishment'), 500);
+                
+                updateUI();
+                
+                if (state.errors >= 3) {
+                    setTimeout(gameOver, 800);
+                } else {
+                    setTimeout(startRound, 1500);
+                }
+            }
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            audioCtx.resume();
+            
+            if (state.screen === 'start') {
+                elements.startScreen.style.display = 'none';
+                state.screen = 'game';
+                // Incrementar runs
+                const m = memory.get();
+                memory.update('runs', (m.runs || 0) + 1);
+                resetGame();
+                return;
+            }
+            
+            if (state.screen === 'death') {
+                elements.deathScreen.style.display = 'none';
+                resetGame();
+                return;
+            }
+            
+            if (state.screen === 'ending') {
+                // No hay escape del final
+                return;
+            }
+            
+            if (!state.waiting || state.touched || state.evaluating) return;
+            
+            // FASE 5: Hold detection
+            if (state.holdRequired || (state.currentChallenge && state.currentChallenge.action === 'hold')) {
+                state.holding = true;
+                state.holdStart = Date.now();
+                elements.holdIndicator.style.opacity = '1';
+                
+                playSound('hold');
+                
+                // Update hold progress
+                const requiredTime = state.currentChallenge.holdTime || 1500;
+                state.holdTimer = setInterval(() => {
+                    const elapsed = Date.now() - state.holdStart;
+                    const progress = Math.min(360, (elapsed / requiredTime) * 360);
+                    elements.holdProgress.style.background = `conic-gradient(#fff ${progress}deg, transparent ${progress}deg)`;
+                    
+                    if (elapsed >= requiredTime) {
+                        clearInterval(state.holdTimer);
+                        evaluateRound();
+                    }
+                }, 30);
+                
+                const m = memory.get();
+                memory.update('holdAttempts', (m.holdAttempts || 0) + 1);
+                return;
+            }
+            
+            state.touched = true;
+            
+            if (state.currentChallenge && state.currentChallenge.lie) {
+                playSound('tick-lie');
+            } else {
+                playSound('tick');
+            }
+            
+            const touchTime = Date.now() - state.roundStartTime;
+            state.touchTimes.push(touchTime);
+            if (state.touchTimes.length > 10) state.touchTimes.shift();
+            state.avgTouchTime = state.touchTimes.reduce((a, b) => a + b, 0) / state.touchTimes.length;
+            
+            // Track fast touches
+            if (touchTime < 500) {
+                const m = memory.get();
+                memory.update('fastTouches', (m.fastTouches || 0) + 1);
+            }
+            
+            if (state.level >= 8 && Math.random() < 0.25) {
+                elements.message.classList.add('waiting-judgment');
+                const delay = 200 + Math.random() * 400;
+                setTimeout(() => {
+                    elements.message.classList.remove('waiting-judgment');
+                    evaluateRound();
+                }, delay);
+            } else {
+                evaluateRound();
+            }
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            
+            if (state.holding) {
+                state.holding = false;
+                if (state.holdTimer) {
+                    clearInterval(state.holdTimer);
+                }
+                elements.holdProgress.style.background = 'conic-gradient(#fff 0deg, transparent 0deg)';
+                
+                // Si soltó antes de tiempo y era un hold real, evaluar como fallo
+                if (state.holdRequired && state.waiting && !state.evaluating) {
+                    const elapsed = Date.now() - state.holdStart;
+                    const requiredTime = state.currentChallenge.holdTime || 1500;
+                    if (elapsed < requiredTime) {
+                        state.touched = true; // Marcamos como toque fallido
+                        evaluateRound();
+                    }
+                }
+            }
+        }
+
+        function updateUI() {
+            elements.errors.textContent = state.errors;
+            elements.level.textContent = state.level;
+        }
+
+        function checkEnding() {
+            for (const key in endings) {
+                const ending = endings[key];
+                if (ending.condition(state)) {
+                    return ending;
+                }
+            }
+            return null;
+        }
+
+        function showEnding(ending) {
+            state.screen = 'ending';
+            elements.deathScreen.style.display = 'none';
+            elements.endingScreen.style.display = 'flex';
+            elements.endingMessage.textContent = ending.text;
+            
+            // Guardar que vio este final
+            const m = memory.get();
+            if (!m.endingsSeen) m.endingsSeen = [];
+            if (!m.endingsSeen.includes(ending.id)) {
+                m.endingsSeen.push(ending.id);
+            }
+            memory.set(m);
+        }
+
+        function gameOver() {
+            state.screen = 'death';
+            
+            // Actualizar memoria
+            const m = memory.get();
+            memory.update('totalDeaths', (m.totalDeaths || 0) + 1);
+            memory.update('maxLevel', Math.max(m.maxLevel || 0, state.maxLevel));
+            memory.update('totalLies', (m.totalLies || 0) + state.timesLied);
+            
+            // Verificar final
+            const ending = checkEnding();
+            if (ending) {
+                setTimeout(() => showEnding(ending), 500);
+                return;
+            }
+            
+            elements.deathScreen.style.display = 'flex';
+            
+            const messages = ["NO", "MAL", "PERDISTE", "JA", "OBVIO"];
+            elements.deathMessage.textContent = messages[Math.floor(Math.random() * messages.length)];
+            
+            // Stats con memoria falsa - CONFUSIÓN CONTROLADA
+            let statsHtml = '';
+            
+            // Array de fragmentos que se ordenan de forma variable
+            const fragments = [];
+            
+            // Nivel - sin etiqueta, confuso a propósito
+            const levelDisplay = Math.random() > 0.3 ? 
+                `${state.maxLevel}` : 
+                `${state.maxLevel}/${state.level}`; // a veces muestra ambos
+            fragments.push({ content: levelDisplay, order: Math.random() });
+            
+            // Mentiras - a veces miente sobre cuánto mintió
+            if (state.timesLied > 0) {
+                const displayedLies = Math.random() > 0.7 ? 
+                    state.timesLied + Math.floor(Math.random() * 3) : 
+                    state.timesLied;
+                fragments.push({ 
+                    content: `<span class="lie-stat">mentí ${displayedLies}</span>`, 
+                    order: Math.random() 
+                });
+            }
+            
+            // Mentira emergente - lo menciona críptico
+            if (state.emergentLieActive || state.consecutiveLies >= 3) {
+                if (Math.random() > 0.6) {
+                    fragments.push({
+                        content: `<span class="lie-stat">no siempre digo que miento</span>`,
+                        order: Math.random()
+                    });
+                }
+            }
+            
+            // Hold exitosos - cuenta como obediencia excesiva
+            if (state.holdSuccesses >= 2) {
+                fragments.push({
+                    content: `<span class="memory-accusation">obedecés bien</span>`,
+                    order: Math.random()
+                });
+            }
+            
+            // Memoria falsa - acusaciones de runs anteriores
+            if (m.runs > 1 && Math.random() > 0.5) {
+                const accusations = [
+                    `la vez anterior duraste menos`,
+                    `ya van ${memory.lie('runs', m.runs)} intentos`,
+                    `moriste ${memory.lie('totalDeaths', m.totalDeaths)} veces`,
+                    `te creíste ${memory.lie('believedLies', m.believedLies) || '?'} mentiras`,
+                    `siempre hacés lo mismo`,
+                    `la primera vez fue mejor`,
+                ];
+                const accusation = accusations[Math.floor(Math.random() * accusations.length)];
+                fragments.push({ 
+                    content: `<span class="memory-accusation">${accusation}</span>`, 
+                    order: Math.random() 
+                });
+            }
+            
+            // Comportamiento
+            const behavior = analyzePlayerBehavior();
+            if (behavior) {
+                const comments = {
+                    fastToucher: 'impulsivo',
+                    alwaysWaits: 'cobarde', 
+                    alternates: 'predecible',
+                    safePlayer: 'aburrido'
+                };
+                fragments.push({ content: comments[behavior], order: Math.random() });
+            }
+            
+            // Ordenar fragmentos de forma semi-aleatoria (confusión controlada)
+            // Pero nivel siempre tiende a ir primero
+            fragments.sort((a, b) => {
+                if (a.content === levelDisplay) return -1;
+                if (b.content === levelDisplay) return 1;
+                return a.order - b.order;
+            });
+            
+            statsHtml = fragments.map(f => f.content).join('<br>');
+            
+            elements.deathStats.innerHTML = statsHtml;
+        }
+
+        function resetGame() {
+            state = {
+                screen: 'game',
+                errors: 0,
+                streak: 0,
+                level: 1,
+                maxLevel: 1,
+                currentChallenge: null,
+                timer: null,
+                timerDuration: 3500,
+                touched: false,
+                waiting: false,
+                evaluating: false,
+                totalRounds: 0,
+                correctRounds: 0,
+                safePlayCount: 0,
+                timesLied: 0,
+                timesLiedAndCaught: 0,
+                touchTimes: [],
+                lastActions: [],
+                avgTouchTime: 1500,
+                timerLying: false,
+                roundStartTime: 0,
+                obedience: 0,
+                disobedience: 0,
+                obedienceRate: 0,
+                disobedienceRate: 0,
+                holding: false,
+                holdStart: 0,
+                holdTimer: null,
+                holdRequired: false,
+                consecutiveLies: 0,
+                holdSuccesses: 0,
+                emergentLieActive: false
+            };
+            updateUI();
+            elements.timerBar.style.width = '0%';
+            elements.holdIndicator.style.opacity = '0';
+            startRound();
+        }
+
+        document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        document.addEventListener('mousedown', handleTouchStart);
+        document.addEventListener('mouseup', handleTouchEnd);
+
+        document.addEventListener('gesturestart', e => e.preventDefault());
+        document.addEventListener('dblclick', e => e.preventDefault());
+
+        // PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
