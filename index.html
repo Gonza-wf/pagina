@@ -484,7 +484,7 @@
             obedient: {
                 id: 'obedient',
                 condition: (s) => s.obedienceRate > 85 && s.totalRounds > 10,
-                text: "OBEDECISTE\nSIEMPRE\n\nBUEN PERRO"
+                text: "OBEDECISTE\nSIEMPRE,\n\nBUEN PERRO"
             },
             distrustful: {
                 id: 'distrustful', 
@@ -494,7 +494,7 @@
             impulsive: {
                 id: 'impulsive',
                 condition: (s) => s.avgTouchTime < 500 && s.touchTimes.length > 8,
-                text: "NO PENSÁS\n\nSOLO\nTOCÁS"
+                text: "NO PENSÁS,\n\nSOLO\nTOCÁS"
             },
             indecisive: {
                 id: 'indecisive',
@@ -512,7 +512,7 @@
                     const m = memory.get();
                     return m.runs >= 5 && s.maxLevel >= (m.maxLevel || 1);
                 },
-                text: "SEGUÍS\nINTENTANDO\n\nNO VA A\nCAMBIAR\nNADA"
+                text: "SEGUÍS\nINTENTANDO,\n\nNO VA A\nCAMBIAR\nNADA"
             }
         };
 
