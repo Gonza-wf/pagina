@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notoques-v1';
+const CACHE_NAME = 'notoques-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
